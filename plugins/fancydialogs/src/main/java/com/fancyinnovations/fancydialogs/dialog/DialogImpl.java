@@ -78,7 +78,7 @@ public class DialogImpl extends Dialog {
                             !textField.getLabel().isEmpty(),
                             ChatColorHandler.translate(textField.getPlaceholder(), player, parsers),
                             textField.getMaxLength(),
-                            textField.getMaxLines() > 0 ?
+                            textField.getMaxLines() > 1 ?
                                     new FS_DialogTextInput.MultilineOptions(textField.getMaxLines(), null) :
                                     null
                     );

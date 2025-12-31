@@ -221,13 +221,22 @@ public class ClientboundShowDialogPacketImpl extends FS_ClientboundShowDialogPac
                         singleOptionInput.isLabelVisible()
                 );
             } else if (input.getControl() instanceof FS_DialogTextInput textInput) {
+                Optional<TextInput.MultilineOptions> multilineOptions = Optional.empty();
+                if (textInput.getMultilineOptions() != null) {
+                    FS_DialogTextInput.MultilineOptions options = textInput.getMultilineOptions();
+                    multilineOptions = Optional.of(new TextInput.MultilineOptions(
+                            Optional.ofNullable(options.getMaxLines()),
+                            Optional.ofNullable(options.getHeight())
+                    ));
+                }
+                
                 control = new TextInput(
                         textInput.getWidth(),
                         PaperAdventure.asVanilla(MiniMessage.miniMessage().deserialize(textInput.getLabel())),
                         textInput.isLabelVisible(),
                         textInput.getInitial(),
                         textInput.getMaxLength(),
-                        Optional.empty()
+                        multilineOptions
                 );
             }
 

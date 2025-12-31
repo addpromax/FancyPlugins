@@ -101,6 +101,7 @@ tasks {
         archiveBaseName.set("FancyDialogs")
 
         dependsOn(":plugins:fancydialogs:fd-api:shadowJar")
+        dependsOn(":libraries:packets:shadowJar")
     }
 
     compileJava {
