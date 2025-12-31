@@ -23,12 +23,8 @@ import de.oliver.fancysitula.api.dialogs.types.FS_MultiActionDialog;
 import de.oliver.fancysitula.api.dialogs.types.FS_NoticeDialog;
 import de.oliver.fancysitula.api.entities.FS_RealPlayer;
 import de.oliver.fancysitula.factories.FancySitula;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.entity.Player;
 import org.lushplugins.chatcolorhandler.ChatColorHandler;
-import org.lushplugins.chatcolorhandler.ModernChatColorHandler;
 import org.lushplugins.chatcolorhandler.parsers.Parser;
 import org.lushplugins.chatcolorhandler.parsers.ParserTypes;
 
@@ -56,20 +52,16 @@ public class DialogImpl extends Dialog {
 
     /**
      * 将文本转换为 MiniMessage 格式，保留翻译键
-     * 使用 ModernChatColorHandler.translate() 返回 Component，然后序列化回 MiniMessage
+     * 直接使用 parseString 方法，指定输出类型为 MINI_MESSAGE
      */
     private String translateToMiniMessage(String text, Player player, List<Parser> parsers) {
         if (text == null || text.isEmpty()) {
             return text;
         }
         
-        // 使用 ModernChatColorHandler 的 translate 方法
-        // 这会解析占位符和颜色，返回 Component 格式
-        Component component = ModernChatColorHandler.translate(text, player, parsers);
-        
-        // 将 Component 序列化回 MiniMessage 格式
-        // 这样可以保留 <lang:xxx> 等标签
-        return MiniMessage.miniMessage().serialize(component);
+        // 直接使用 parseString 方法，指定输出类型为 MINI_MESSAGE
+        // 这样会解析占位符，但保持 MiniMessage 格式，不会转换为 § 代码
+        return ChatColorHandler.parsers().parseString(text, Parser.OutputType.MINI_MESSAGE, player, parsers);
     }
 
     private FS_Dialog buildForPlayer(Player player) {
