@@ -3,6 +3,7 @@ package de.oliver.fancynpcs.commands;
 import de.oliver.fancylib.translations.Translator;
 import de.oliver.fancylib.translations.message.Message;
 import de.oliver.fancynpcs.FancyNpcs;
+import de.oliver.fancynpcs.api.data.property.NpcVisibility;
 import de.oliver.fancynpcs.commands.arguments.ActionTriggerArgument;
 import de.oliver.fancynpcs.commands.arguments.ActionTypeArgument;
 import de.oliver.fancynpcs.commands.arguments.LocationArgument;
@@ -129,6 +130,8 @@ public final class CloudCommandManager {
                 translationKey = "command_invalid_entity_type";
             else if (exceptionContext.exception().enumClass() == GlowingColor.class)
                 translationKey = "command_invalid_glowing_color";
+            else if (exceptionContext.exception().enumClass() == NpcVisibility.class)
+                translationKey = "command_invalid_npc_visibility";
             // Sending error message to the sender. In case no specialized message has been found, a generic one is used instead.
             translator.translate(translationKey)
                     .replaceStripped("input", exceptionContext.exception().input())
@@ -194,12 +197,13 @@ public final class CloudCommandManager {
         annotationParser.parse(TypeCMD.INSTANCE);
         annotationParser.parse(ActionCMD.INSTANCE);
         annotationParser.parse(VisibilityDistanceCMD.INSTANCE);
+        annotationParser.parse(VisibilityCMD.INSTANCE);
 
         if (FancyNpcs.ENABLE_DEBUG_MODE_FEATURE_FLAG.isEnabled()) {
             annotationParser.parse(FancyNpcsDebugCMD.INSTANCE);
         }
 
-        if (Set.of("1.20.5", "1.20.6", "1.21", "1.21.1", "1.21.2", "1.21.3", "1.21.4", "1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10", "1.21.11").contains(Bukkit.getMinecraftVersion())) {
+        if (Set.of("1.21", "1.21.1", "1.21.2", "1.21.3", "1.21.4", "1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10", "1.21.11").contains(Bukkit.getMinecraftVersion())) {
             annotationParser.parse(ScaleCMD.INSTANCE);
         }
 

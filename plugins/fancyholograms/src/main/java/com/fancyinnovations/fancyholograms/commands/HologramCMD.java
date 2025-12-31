@@ -11,6 +11,7 @@ import com.fancyinnovations.fancyholograms.main.FancyHologramsPlugin;
 import com.fancyinnovations.fancyholograms.util.PluginUtils;
 import com.google.common.primitives.Ints;
 import de.oliver.fancylib.MessageHelper;
+import de.oliver.fancylib.colors.GlowingColor;
 import de.oliver.fancynpcs.api.FancyNpcsPlugin;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
@@ -41,6 +42,9 @@ public final class HologramCMD extends Command {
             <%primary_color%>- /hologram edit <hologram> insertBefore <line number> <text ...> <dark_gray>- <white>Inserts a line before another
             <%primary_color%>- /hologram edit <hologram> insertAfter <line number> <text ...> <dark_gray>- <white>Inserts a line after another
             <%primary_color%>- /hologram edit <hologram> setLine <line number> <text ...> <dark_gray>- <white>Edits the line
+            <%primary_color%>- /hologram edit <hologram> swapLines <first> <second> <dark_gray>- <white>Swaps two lines
+            <%primary_color%>- /hologram edit <hologram> moveLineUp <line> <dark_gray>- <white>Moves a line up one position
+            <%primary_color%>- /hologram edit <hologram> moveLineDown <line> <dark_gray>- <white>Moves a line down one position
             <%primary_color%>- /hologram edit <hologram> position <dark_gray>- <white>Teleports the hologram to you
             <%primary_color%>- /hologram edit <hologram> moveTo <x> <y> <z> [yaw] [pitch] <dark_gray>- <white>Teleports the hologram to the coordinates
             <%primary_color%>- /hologram edit <hologram> rotate <degrees> <dark_gray>- <white>Rotates the hologram
@@ -192,7 +196,7 @@ public final class HologramCMD extends Command {
 
             final var usingNpcs = PluginUtils.isFancyNpcsEnabled();
 
-            List<String> suggestions = new ArrayList<>(Arrays.asList("traits", "position", "moveHere", "center", "moveTo", "rotate", "rotatepitch", "billboard", "scale", "translate", "visibilityDistance", "visibility", "shadowRadius", "shadowStrength", "brightness", usingNpcs ? "linkWithNpc" : "", usingNpcs ? "unlinkWithNpc" : ""));
+            List<String> suggestions = new ArrayList<>(Arrays.asList("moveDown", "moveUp", "glowing", "traits", "position", "moveHere", "center", "moveTo", "rotate", "rotatepitch", "billboard", "scale", "translate", "visibilityDistance", "visibility", "shadowRadius", "shadowStrength", "brightness", usingNpcs ? "linkWithNpc" : "", usingNpcs ? "unlinkWithNpc" : ""));
             suggestions.addAll(type.getCommands());
 
             return suggestions.stream().filter(input -> input.toLowerCase().startsWith(args[2].toLowerCase(Locale.ROOT))).toList();
@@ -205,6 +209,15 @@ public final class HologramCMD extends Command {
         // /holo edit [hologram] [option] {tab:contextual}
         if (args.length == 4) {
             final var suggestions = switch (args[2].toLowerCase(Locale.ROOT)) {
+                case "glowing" -> {
+                    final var values = new ArrayList<>(List.of(GlowingColor.values()));
+
+                    if (hologram.getData() instanceof DisplayHologramData displayData) {
+                        values.remove(displayData.getGlowingColor());
+                    }
+
+                    yield values.stream().map(Enum::name);
+                }
                 case "billboard" -> {
                     final var values = new ArrayList<>(List.of(Display.Billboard.values()));
 
@@ -242,7 +255,7 @@ public final class HologramCMD extends Command {
                 }
                 case "brightness" -> Stream.of("block", "sky");
                 case "textalignment" -> Arrays.stream(TextDisplay.TextAlignment.values()).map(Enum::name);
-                case "setline", "removeline" -> {
+                case "setline", "removeline", "movedown", "moveup" -> {
                     TextHologramData textData = (TextHologramData) hologram.getData();
                     yield IntStream.range(1, textData.getText().size() + 1).mapToObj(Integer::toString);
                 }
@@ -328,59 +341,73 @@ public final class HologramCMD extends Command {
     private boolean edit(@NotNull final CommandSender player, @NotNull final Hologram hologram, @NotNull final String[] args) {
         final var action = args[2].toLowerCase();
 
-        // actions without a data
-        switch (action) {
-            case "position", "movehere" -> {
-                return new MoveHereCMD().run(player, hologram, args);
+        try {
+            // actions without a data
+            switch (action) {
+                case "position", "movehere" -> {
+                    return new MoveHereCMD().run(player, hologram, args);
+                }
+                case "center" -> {
+                    return new CenterCMD().run(player, hologram, args);
+                }
+                case "unlinkwithnpc" -> {
+                    return new UnlinkWithNpcCMD().run(player, hologram, args);
+                }
+                case "item" -> {
+                    return new ItemCMD().run(player, hologram, args);
+                }
             }
-            case "center" -> {
-                return new CenterCMD().run(player, hologram, args);
-            }
-            case "unlinkwithnpc" -> {
-                return new UnlinkWithNpcCMD().run(player, hologram, args);
-            }
-            case "item" -> {
-                return new ItemCMD().run(player, hologram, args);
-            }
-        }
 
-        if (args.length == 3) {
-            MessageHelper.error(player, "Wrong usage: /hologram help");
+            if (args.length == 3) {
+                MessageHelper.error(player, "Wrong usage: /hologram help");
+                return false;
+            }
+
+            return switch (action) {
+                // display data
+                case "moveto" -> new MoveToCMD().run(player, hologram, args);
+                case "rotate" -> new RotateCMD().run(player, hologram, args);
+                case "rotatepitch" -> new RotatePitchCMD().run(player, hologram, args);
+                case "billboard" -> new BillboardCMD().run(player, hologram, args);
+                case "scale" -> new ScaleCMD().run(player, hologram, args);
+                case "translate" -> new TranslateCommand().run(player, hologram, args);
+                case "updatetextinterval" -> new UpdateTextIntervalCMD().run(player, hologram, args);
+                case "visibilitydistance" -> new VisibilityDistanceCMD().run(player, hologram, args);
+                case "visibility" -> new VisibilityCMD().run(player, hologram, args);
+                case "linkwithnpc" -> new LinkWithNpcCMD().run(player, hologram, args);
+                case "shadowradius" -> new ShadowRadiusCMD().run(player, hologram, args);
+                case "shadowstrength" -> new ShadowStrengthCMD().run(player, hologram, args);
+                case "brightness" -> new BrightnessCMD().run(player, hologram, args);
+
+                // text data
+                case "background" -> new BackgroundCMD().run(player, hologram, args);
+                case "addline" -> new AddLineCMD().run(player, hologram, args);
+                case "setline" -> new SetLineCMD().run(player, hologram, args);
+                case "removeline" -> new RemoveLineCMD().run(player, hologram, args);
+                case "insertbefore" -> new InsertBeforeCMD().run(player, hologram, args);
+                case "insertafter" -> new InsertAfterCMD().run(player, hologram, args);
+                case "textshadow" -> new TextShadowCMD().run(player, hologram, args);
+                case "textalignment" -> new TextAlignmentCMD().run(player, hologram, args);
+                case "seethrough" -> new SeeThroughCMD().run(player, hologram, args);
+                case "glowing" -> new GlowingCMD().run(player, hologram, args);
+                case "movedown" -> new MoveDownCMD().run(player, hologram, args);
+
+                // block data
+                case "block" -> new BlockCMD().run(player, hologram, args);
+
+                default -> false;
+            };
+        } catch (ArrayIndexOutOfBoundsException | StringIndexOutOfBoundsException e) {
+            MessageHelper.error(player, "Invalid command arguments. Use /hologram help for correct syntax");
+            return false;
+        } catch (NumberFormatException e) {
+            MessageHelper.error(player, "Invalid number format in command arguments");
+            return false;
+        } catch (Exception e) {
+            MessageHelper.error(player, "An error occurred while executing the command. Please check your syntax with /hologram help");
+            plugin.getLogger().warning("Error executing hologram command: " + e.getMessage());
             return false;
         }
-
-        return switch (action) {
-            // display data
-            case "moveto" -> new MoveToCMD().run(player, hologram, args);
-            case "rotate" -> new RotateCMD().run(player, hologram, args);
-            case "rotatepitch" -> new RotatePitchCMD().run(player, hologram, args);
-            case "billboard" -> new BillboardCMD().run(player, hologram, args);
-            case "scale" -> new ScaleCMD().run(player, hologram, args);
-            case "translate" -> new TranslateCommand().run(player, hologram, args);
-            case "updatetextinterval" -> new UpdateTextIntervalCMD().run(player, hologram, args);
-            case "visibilitydistance" -> new VisibilityDistanceCMD().run(player, hologram, args);
-            case "visibility" -> new VisibilityCMD().run(player, hologram, args);
-            case "linkwithnpc" -> new LinkWithNpcCMD().run(player, hologram, args);
-            case "shadowradius" -> new ShadowRadiusCMD().run(player, hologram, args);
-            case "shadowstrength" -> new ShadowStrengthCMD().run(player, hologram, args);
-            case "brightness" -> new BrightnessCMD().run(player, hologram, args);
-
-            // text data
-            case "background" -> new BackgroundCMD().run(player, hologram, args);
-            case "addline" -> new AddLineCMD().run(player, hologram, args);
-            case "setline" -> new SetLineCMD().run(player, hologram, args);
-            case "removeline" -> new RemoveLineCMD().run(player, hologram, args);
-            case "insertbefore" -> new InsertBeforeCMD().run(player, hologram, args);
-            case "insertafter" -> new InsertAfterCMD().run(player, hologram, args);
-            case "textshadow" -> new TextShadowCMD().run(player, hologram, args);
-            case "textalignment" -> new TextAlignmentCMD().run(player, hologram, args);
-            case "seethrough" -> new SeeThroughCMD().run(player, hologram, args);
-
-            // block data
-            case "block" -> new BlockCMD().run(player, hologram, args);
-
-            default -> false;
-        };
     }
 
 }

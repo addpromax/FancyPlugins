@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.mojang.datafixers.util.Pair;
+import com.mojang.serialization.JavaOps;
 import de.oliver.fancylib.ReflectionUtils;
 import de.oliver.fancynpcs.api.FancyNpcsPlugin;
 import de.oliver.fancynpcs.api.Npc;
@@ -16,6 +17,7 @@ import net.minecraft.Optionull;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.chat.RemoteChatSession;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.*;
@@ -100,9 +102,7 @@ public class Npc_1_21_1 extends Npc {
             );
         }
 
-        NpcSpawnEvent spawnEvent = new NpcSpawnEvent(this, player);
-        spawnEvent.callEvent();
-        if (spawnEvent.isCancelled()) {
+        if (!new NpcSpawnEvent(this, player).callEvent()) {
             return;
         }
 
@@ -225,6 +225,14 @@ public class Npc_1_21_1 extends Npc {
 
         net.kyori.adventure.text.Component displayName = ModernChatColorHandler.translate(data.getDisplayName(), serverPlayer.getBukkitEntity());
         Component vanillaComponent = PaperAdventure.asVanilla(displayName);
+
+        // Validate MiniMessage syntax
+        try {
+            ComponentSerialization.CODEC.encodeStart(JavaOps.INSTANCE, vanillaComponent);
+        } catch (Exception e) {
+            vanillaComponent = Component.literal("Invalid displayname (check MiniMessage syntax)");
+        }
+
         if (!(npc instanceof ServerPlayer)) {
             npc.setCustomName(vanillaComponent);
             npc.setCustomNameVisible(true);
@@ -261,7 +269,7 @@ public class Npc_1_21_1 extends Npc {
 
         npc.setGlowingTag(data.isGlowing());
 
-        if (data.getEquipment() != null && data.getEquipment().size() > 0) {
+        if (data.getEquipment() != null && !data.getEquipment().isEmpty()) {
             List<Pair<EquipmentSlot, ItemStack>> equipmentList = new ArrayList<>();
 
             for (NpcEquipmentSlot slot : data.getEquipment().keySet()) {
@@ -329,6 +337,7 @@ public class Npc_1_21_1 extends Npc {
         serverPlayer.connection.send(setEntityDataPacket);
     }
 
+    @Override
     public void move(Player player, boolean swingArm) {
         if (npc == null) {
             return;

@@ -39,14 +39,12 @@ public abstract class Npc {
     }
 
     protected String generateLocalName() {
-        String localName = "";
+        StringBuilder localName = new StringBuilder();
         for (int i = 0; i < 8; i++) {
-            localName += "&" + localNameChars[(int) RandomUtils.randomInRange(0, localNameChars.length)];
+            localName.append('&').append(localNameChars[(int) RandomUtils.randomInRange(0, localNameChars.length)]);
         }
 
-        localName = ChatColor.translateAlternateColorCodes('&', localName);
-
-        return localName;
+        return ChatColor.translateAlternateColorCodes('&', localName.toString());
     }
 
     public abstract void create();
@@ -76,6 +74,10 @@ public abstract class Npc {
      * @return True if the NPC should be visible for the player, otherwise false.
      */
     protected boolean shouldBeVisible(Player player) {
+        if (!data.getVisibility().canSee(player, this)) {
+            return false;
+        }
+
         int visibilityDistance = (data.getVisibilityDistance() > -1) ? data.getVisibilityDistance() : FancyNpcsPlugin.get().getFancyNpcConfig().getVisibilityDistance();
 
         if (visibilityDistance == 0) {
@@ -98,11 +100,9 @@ public abstract class Npc {
             return false;
         }
 
-        if (FancyNpcsPlugin.get().getFancyNpcConfig().isSkipInvisibleNpcs() && data.getAttributes().getOrDefault(INVISIBLE_ATTRIBUTE, "false").equalsIgnoreCase("true") && !data.isGlowing() && data.getEquipment().isEmpty()) {
-            return false;
-        }
-
-        return true;
+        return !FancyNpcsPlugin.get().getFancyNpcConfig().isSkipInvisibleNpcs()
+                || !data.getAttributes().getOrDefault(INVISIBLE_ATTRIBUTE, "false").equalsIgnoreCase("true")
+                || data.isGlowing() || !data.getEquipment().isEmpty();
     }
 
     public void checkAndUpdateVisibility(Player player) {
@@ -125,6 +125,12 @@ public abstract class Npc {
                 remove(player);
             }
         });
+    }
+
+    public void checkAndUpdateVisibilityForAll() {
+        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+            checkAndUpdateVisibility(onlinePlayer);
+        }
     }
 
     public abstract void lookAt(Player player, Location location);
@@ -182,10 +188,7 @@ public abstract class Npc {
         }
 
         List<NpcAction.NpcActionData> actions = data.getActions(actionTrigger);
-        NpcInteractEvent npcInteractEvent = new NpcInteractEvent(this, data.getOnClick(), actions, player, actionTrigger);
-        npcInteractEvent.callEvent();
-
-        if (npcInteractEvent.isCancelled()) {
+        if (!new NpcInteractEvent(this, data.getOnClick(), actions, player, actionTrigger).callEvent()) {
             return;
         }
 
@@ -218,6 +221,10 @@ public abstract class Npc {
 
     public Map<UUID, Boolean> getIsVisibleForPlayer() {
         return isVisibleForPlayer;
+    }
+
+    public boolean isShownFor(Player player) {
+        return isVisibleForPlayer.getOrDefault(player.getUniqueId(), false);
     }
 
     public Map<UUID, Boolean> getIsLookingAtPlayer() {
