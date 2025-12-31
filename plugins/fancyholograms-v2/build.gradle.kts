@@ -107,6 +107,7 @@ tasks {
         archiveBaseName.set("FancyHolograms")
 
         dependsOn(":plugins:fancyholograms-v2:api:shadowJar")
+        dependsOn(":libraries:packets:shadowJar")
     }
 
     compileJava {

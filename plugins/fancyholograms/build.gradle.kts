@@ -113,6 +113,7 @@ tasks {
         archiveClassifier.set("")
 
         dependsOn(":plugins:fancyholograms:fh-api:shadowJar")
+        dependsOn(":libraries:packets:shadowJar")
     }
 
     compileJava {

@@ -111,6 +111,7 @@ tasks {
         archiveClassifier.set("")
         archiveBaseName.set("FancyNpcs")
         dependsOn(":plugins:fancynpcs:fn-api:shadowJar")
+        dependsOn(":libraries:packets:shadowJar")
     }
 
     publishing {
