@@ -237,25 +237,6 @@ public class FancyNpcs extends JavaPlugin implements FancyNpcsPlugin {
 
         versionConfig.load();
 
-        final ComparableVersion currentVersion = new ComparableVersion(versionConfig.getVersion());
-        supplyAsync(getVersionFetcher()::fetchNewestVersion)
-                .thenApply(Objects::requireNonNull)
-                .whenComplete((newest, error) -> {
-                    if (error != null || newest.compareTo(currentVersion) <= 0) {
-                        return; // could not get the newest version or already on latest
-                    }
-
-                    fancyLogger.warn("You are not using the latest version of the FancyNpcs plugin.");
-                    getLogger().warning("""
-                            
-                            -------------------------------------------------------
-                            You are not using the latest version of the FancyNpcs plugin.
-                            Please update to the newest version (%s).
-                            %s
-                            -------------------------------------------------------
-                            """.formatted(newest, getVersionFetcher().getDownloadUrl()));
-                });
-
         if (!ServerSoftware.isPaper()) {
             fancyLogger.warn("You are not using Paper as server software.");
             getLogger().warning("--------------------------------------------------");

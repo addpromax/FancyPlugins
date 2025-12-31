@@ -163,9 +163,6 @@ public final class FancyHolograms extends JavaPlugin implements FancyHologramsPl
         registerListeners();
 
         versionConfig.load();
-        if (getHologramConfiguration().areVersionNotificationsEnabled()) {
-            checkForNewerVersion();
-        }
 
         registerMetrics();
 
@@ -307,24 +304,6 @@ public final class FancyHolograms extends JavaPlugin implements FancyHologramsPl
         }
     }
 
-    private void checkForNewerVersion() {
-        final var current = new ComparableVersion(versionConfig.getVersion());
-
-        supplyAsync(getVersionFetcher()::fetchNewestVersion).thenApply(Objects::requireNonNull).whenComplete((newest, error) -> {
-            if (error != null || newest.compareTo(current) <= 0) {
-                return; // could not get the newest version or already on latest
-            }
-
-            fancyLogger.warn("""
-                    
-                    -------------------------------------------------------
-                    You are not using the latest version of the FancyHolograms plugin.
-                    Please update to the newest version (%s).
-                    %s
-                    -------------------------------------------------------
-                    """.formatted(newest, getVersionFetcher().getDownloadUrl()));
-        });
-    }
 
     private void registerMetrics() {
         Metrics metrics = new Metrics(this, 17990);

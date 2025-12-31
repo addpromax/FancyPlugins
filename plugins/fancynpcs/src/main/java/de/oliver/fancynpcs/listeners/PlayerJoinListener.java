@@ -29,12 +29,6 @@ public class PlayerJoinListener implements Listener {
         FancyNpcs.getInstance().getVisibilityTracker().addJoinDelayPlayer(event.getPlayer().getUniqueId());
         FancyNpcs.getInstance().getScheduler().runTaskLater(null, 20L * 2, () -> FancyNpcs.getInstance().getVisibilityTracker().removeJoinDelayPlayer(event.getPlayer().getUniqueId()));
 
-        if (!FancyNpcs.getInstance().getFancyNpcConfig().isMuteVersionNotification() && event.getPlayer().hasPermission("FancyNpcs.admin")) {
-            FancyNpcs.getInstance().getScheduler().runTaskAsynchronously(
-                    () -> FancyNpcs.getInstance().getVersionConfig().checkVersionAndDisplay(event.getPlayer(), true)
-            );
-        }
-
         for (ProfileProperty property : event.getPlayer().getPlayerProfile().getProperties()) {
             if (!property.getName().equals("textures")) {
                 continue;

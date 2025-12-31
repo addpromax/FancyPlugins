@@ -129,3 +129,40 @@ Available actions include:
 - `open_dialog`: Opens another dialog (set `data` to the ID of the dialog to open)
 - `open_random_dialog`: Opens another dialog (set `data` to a list of dialog IDs separated by commas: 'dialog1,dialog2,dialog3')
 - `send_to_server`: Sends the player to another server (requires BungeeCord or Velocity) (set `data` to the server name)
+
+## Conditional Features (NEW!)
+
+FancyDialogs now supports conditional visibility for buttons and inputs! You can control when elements are shown based on permissions or PlaceholderAPI values.
+
+### Visibility Conditions
+
+All buttons and inputs support `visibilityConditions` - a list of conditions that must ALL be met for the element to be visible.
+
+#### Condition Types
+
+**Permission-based:**
+- `PERMISSION` - Player must have the permission
+- `NO_PERMISSION` - Player must NOT have the permission
+
+**PlaceholderAPI-based:**
+- `PAPI_EQUALS` - Placeholder value must equal compareValue
+- `PAPI_NOT_EQUALS` - Placeholder value must not equal compareValue
+- `PAPI_GREATER_THAN` - Placeholder value must be greater than compareValue (numeric)
+- `PAPI_LESS_THAN` - Placeholder value must be less than compareValue (numeric)
+- `PAPI_GREATER_OR_EQUAL` - Placeholder value must be >= compareValue (numeric)
+- `PAPI_LESS_OR_EQUAL` - Placeholder value must be <= compareValue (numeric)
+- `PAPI_CONTAINS` - Placeholder value must contain compareValue (string)
+- `PAPI_STARTS_WITH` - Placeholder value must start with compareValue (string)
+- `PAPI_ENDS_WITH` - Placeholder value must end with compareValue (string)
+
+### Checkbox Special Feature
+
+Checkboxes also support `checkedConditions` - conditions that control whether the checkbox is initially checked (overrides the `initial` value).
+
+### Example Usage
+
+See the [Conditional Features Tutorial](conditional-features.md) for detailed examples and use cases.
+
+!!!tip
+Use `/dialog open conditional_dialog_example` to see a working example of all conditional features!
+!!!

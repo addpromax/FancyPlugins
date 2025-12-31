@@ -19,12 +19,6 @@ public final class FancyNpcsCMD {
     private FancyNpcsCMD() {
     }
 
-    @Command("fancynpcs version")
-    @Permission("fancynpcs.command.fancynpcs.version")
-    public void onVersion(final CommandSender sender) {
-        plugin.getVersionConfig().checkVersionAndDisplay(sender, false);
-    }
-
     @Command("fancynpcs reload")
     @Permission("fancynpcs.command.fancynpcs.reload")
     public void onReload(final CommandSender sender) {

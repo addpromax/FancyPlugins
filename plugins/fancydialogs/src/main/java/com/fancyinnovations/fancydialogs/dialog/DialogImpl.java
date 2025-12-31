@@ -5,6 +5,7 @@ import com.fancyinnovations.fancydialogs.api.Dialog;
 import com.fancyinnovations.fancydialogs.api.data.DialogBodyData;
 import com.fancyinnovations.fancydialogs.api.data.DialogButton;
 import com.fancyinnovations.fancydialogs.api.data.DialogData;
+import com.fancyinnovations.fancydialogs.api.data.condition.ConditionEvaluator;
 import com.fancyinnovations.fancydialogs.api.data.inputs.DialogCheckbox;
 import com.fancyinnovations.fancydialogs.api.data.inputs.DialogInput;
 import com.fancyinnovations.fancydialogs.api.data.inputs.DialogSelect;
@@ -24,12 +25,14 @@ import de.oliver.fancysitula.api.entities.FS_RealPlayer;
 import de.oliver.fancysitula.factories.FancySitula;
 import org.bukkit.entity.Player;
 import org.lushplugins.chatcolorhandler.ChatColorHandler;
+import org.lushplugins.chatcolorhandler.parsers.Parser;
 import org.lushplugins.chatcolorhandler.parsers.ParserTypes;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class DialogImpl extends Dialog {
 
@@ -37,11 +40,23 @@ public class DialogImpl extends Dialog {
         super(id, data);
     }
 
+    /**
+     * 获取不包含 MiniMessage 翻译键解析器的 Parser 列表
+     * 这样可以保留 <lang:xxx> 标签，让客户端根据自己的语言设置来显示
+     */
+    private List<Parser> getParsersWithoutTranslatable() {
+        return ChatColorHandler.parsers().getRegisteredParsers().stream()
+                .filter(parser -> !(parser.getClass().getSimpleName().equals("MiniMessagePlaceholderParser")))
+                .collect(Collectors.toList());
+    }
+
     private FS_Dialog buildForPlayer(Player player) {
+        List<Parser> parsers = getParsersWithoutTranslatable();
+        
         List<FS_DialogBody> body = new ArrayList<>();
         for (DialogBodyData bodyData : data.body()) {
             FS_DialogTextBody fsDialogTextBody = new FS_DialogTextBody(
-                    ChatColorHandler.translate(bodyData.text(), player, ParserTypes.placeholder()),
+                    ChatColorHandler.translate(bodyData.text(), player, parsers),
                     200 // default text width
             );
             body.add(fsDialogTextBody);
@@ -50,13 +65,18 @@ public class DialogImpl extends Dialog {
         List<FS_DialogInput> inputs = new ArrayList<>();
         if (data.inputs() != null) {
             for (DialogInput input : data.inputs().all()) {
+                // Check visibility conditions
+                if (!ConditionEvaluator.evaluateAll(input.getVisibilityConditions(), player)) {
+                    continue; // Skip this input if conditions are not met
+                }
+                
                 FS_DialogInputControl control = null;
                 if (input instanceof DialogTextField textField) {
                     control = new FS_DialogTextInput(
                             200, // default width
-                            ChatColorHandler.translate(textField.getLabel(), player, ParserTypes.placeholder()),
+                            ChatColorHandler.translate(textField.getLabel(), player, parsers),
                             !textField.getLabel().isEmpty(),
-                            ChatColorHandler.translate(textField.getPlaceholder(), player, ParserTypes.placeholder()),
+                            ChatColorHandler.translate(textField.getPlaceholder(), player, parsers),
                             textField.getMaxLength(),
                             textField.getMaxLines() > 0 ?
                                     new FS_DialogTextInput.MultilineOptions(textField.getMaxLines(), null) :
@@ -65,22 +85,34 @@ public class DialogImpl extends Dialog {
                 } else if (input instanceof DialogSelect select) {
                     List<FS_DialogSingleOptionInput.Entry> entries = new ArrayList<>();
                     for (DialogSelect.Entry entry : select.getOptions()) {
+                        // Evaluate selected conditions to determine if this option should be initially selected
+                        boolean isInitiallySelected = entry.initial();
+                        if (entry.selectedConditions() != null && !entry.selectedConditions().isEmpty()) {
+                            // If selectedConditions are defined and met, this option should be selected
+                            isInitiallySelected = ConditionEvaluator.evaluateAll(entry.selectedConditions(), player);
+                        }
+                        
                         entries.add(
                                 new FS_DialogSingleOptionInput.Entry(
-                                        ChatColorHandler.translate(entry.value(), player, ParserTypes.placeholder()),
-                                        ChatColorHandler.translate(entry.display(), player, ParserTypes.placeholder()),
-                                        entry.initial()
+                                        ChatColorHandler.translate(entry.value(), player, parsers),
+                                        ChatColorHandler.translate(entry.display(), player, parsers),
+                                        isInitiallySelected
                                 )
                         );
                     }
                     control = new FS_DialogSingleOptionInput(
                             200, // default width
                             entries,
-                            ChatColorHandler.translate(select.getLabel(), player, ParserTypes.placeholder()),
+                            ChatColorHandler.translate(select.getLabel(), player, parsers),
                             !select.getLabel().isEmpty()
                     );
                 } else if (input instanceof DialogCheckbox checkbox) {
-                    control = new FS_DialogBooleanInput(input.getLabel(), checkbox.isInitial(), "true", "false");
+                    // Evaluate checked conditions to determine initial state
+                    boolean initialChecked = checkbox.isInitial();
+                    if (checkbox.getCheckedConditions() != null && !checkbox.getCheckedConditions().isEmpty()) {
+                        initialChecked = ConditionEvaluator.evaluateAll(checkbox.getCheckedConditions(), player);
+                    }
+                    control = new FS_DialogBooleanInput(input.getLabel(), initialChecked, "true", "false");
                 }
 
                 if (control == null) {
@@ -94,10 +126,15 @@ public class DialogImpl extends Dialog {
 
         List<FS_DialogActionButton> actions = new ArrayList<>();
         for (DialogButton button : data.buttons()) {
+            // Check visibility conditions
+            if (!ConditionEvaluator.evaluateAll(button.visibilityConditions(), player)) {
+                continue; // Skip this button if conditions are not met
+            }
+            
             FS_DialogActionButton fsDialogActionButton = new FS_DialogActionButton(
                     new FS_CommonButtonData(
-                            ChatColorHandler.translate(button.label(), player, ParserTypes.placeholder()),
-                            ChatColorHandler.translate(button.tooltip(), player, ParserTypes.placeholder()),
+                            ChatColorHandler.translate(button.label(), player, parsers),
+                            ChatColorHandler.translate(button.tooltip(), player, parsers),
                             150 // default button width
                     ),
                     new FS_DialogCustomAction(
@@ -114,8 +151,8 @@ public class DialogImpl extends Dialog {
         if (actions.isEmpty()) {
             return new FS_NoticeDialog(
                     new FS_CommonDialogData(
-                            ChatColorHandler.translate(data.title(), player, ParserTypes.placeholder()),
-                            ChatColorHandler.translate(data.title(), player, ParserTypes.placeholder()),
+                            ChatColorHandler.translate(data.title(), player, parsers),
+                            ChatColorHandler.translate(data.title(), player, parsers),
                             data.canCloseWithEscape(),
                             false,
                             FS_DialogAction.CLOSE,
@@ -137,8 +174,8 @@ public class DialogImpl extends Dialog {
 
         return new FS_MultiActionDialog(
                 new FS_CommonDialogData(
-                        ChatColorHandler.translate(data.title(), player, ParserTypes.placeholder()),
-                        ChatColorHandler.translate(data.title(), player, ParserTypes.placeholder()),
+                        ChatColorHandler.translate(data.title(), player, parsers),
+                        ChatColorHandler.translate(data.title(), player, parsers),
                         data.canCloseWithEscape(),
                         false,
                         FS_DialogAction.CLOSE,

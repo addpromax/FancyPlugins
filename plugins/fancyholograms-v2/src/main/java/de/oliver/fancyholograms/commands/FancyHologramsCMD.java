@@ -48,7 +48,6 @@ public final class FancyHologramsCMD extends Command {
 
                 MessageHelper.success(sender, "Reloaded config and holograms");
             }
-            case "version" -> FancyHolograms.get().getHologramThread().submit(() -> FancyHolograms.get().getVersionConfig().checkVersionAndDisplay(sender, false));
             case "convert" -> {
                 if (args.length < 3) {
                     MessageHelper.info(sender, "Usage: /fancyholograms convert <type> <targets> [args...]");
@@ -106,7 +105,7 @@ public final class FancyHologramsCMD extends Command {
         List<String> suggestions = new ArrayList<>();
 
         if (args.length == 1) {
-            suggestions.addAll(Arrays.asList("version", "reload", "save", "convert"));
+            suggestions.addAll(Arrays.asList("reload", "save", "convert"));
         } else {
             if (Objects.equals(args[0], "convert")) {
 

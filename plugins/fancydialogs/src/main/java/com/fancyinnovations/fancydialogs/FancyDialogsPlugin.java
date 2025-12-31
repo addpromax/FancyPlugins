@@ -145,24 +145,6 @@ public class FancyDialogsPlugin extends JavaPlugin implements FancyDialogs {
 
     @Override
     public void onEnable() {
-        final ComparableVersion currentVersion = new ComparableVersion(versionConfig.getVersion());
-        supplyAsync(versionFetcher::fetchNewestVersion)
-                .thenApply(Objects::requireNonNull)
-                .whenComplete((newest, error) -> {
-                    if (error != null || newest.compareTo(currentVersion) <= 0) {
-                        return; // could not get the newest version or already on latest
-                    }
-
-                    fancyLogger.warn("You are not using the latest version of the FancyDialogs plugin.");
-                    getLogger().warning("""
-                            
-                            -------------------------------------------------------
-                            You are not using the latest version of the FancyDialogs plugin.
-                            Please update to the newest version (%s).
-                            %s
-                            -------------------------------------------------------
-                            """.formatted(newest, versionFetcher.getDownloadUrl()));
-                });
 
         if (!ServerSoftware.isPaper()) {
             fancyLogger.warn("""

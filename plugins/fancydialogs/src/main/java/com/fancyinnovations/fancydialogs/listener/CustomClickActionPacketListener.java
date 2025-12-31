@@ -4,6 +4,9 @@ import com.fancyinnovations.fancydialogs.FancyDialogsPlugin;
 import com.fancyinnovations.fancydialogs.api.Dialog;
 import com.fancyinnovations.fancydialogs.api.DialogAction;
 import com.fancyinnovations.fancydialogs.api.data.DialogButton;
+import com.fancyinnovations.fancydialogs.api.data.condition.ConditionEvaluator;
+import com.fancyinnovations.fancydialogs.api.data.inputs.DialogInput;
+import com.fancyinnovations.fancydialogs.api.data.inputs.DialogSelect;
 import com.fancyinnovations.fancydialogs.api.events.DialogButtonClickedEvent;
 import de.oliver.fancysitula.api.packets.FS_ServerboundCustomClickActionPacket;
 import de.oliver.fancysitula.api.packets.FS_ServerboundPacket;
@@ -73,6 +76,7 @@ public class CustomClickActionPacketListener {
             return;
         }
 
+        // Execute button actions
         for (DialogButton.DialogAction btnAction : btn.actions()) {
             DialogAction action = FancyDialogsPlugin.get().getActionRegistry().getAction(btnAction.name());
             if (action == null) {
@@ -86,6 +90,57 @@ public class CustomClickActionPacketListener {
             }
 
             action.execute(event.player(), dialog, data);
+        }
+        
+        // Execute select option actions (only if the selected option is different from current state)
+        if (dialog.getData().inputs() != null) {
+            for (DialogInput input : dialog.getData().inputs().all()) {
+                if (!(input instanceof DialogSelect select)) {
+                    continue;
+                }
+                
+                String selectedValue = packet.getPayload().get(select.getKey());
+                if (selectedValue == null) {
+                    continue;
+                }
+                
+                // Find the selected option
+                for (DialogSelect.Entry option : select.getOptions()) {
+                    if (!option.value().equals(selectedValue)) {
+                        continue;
+                    }
+                    
+                    // Check if this option is already the current state
+                    if (option.selectedConditions() != null && !option.selectedConditions().isEmpty()) {
+                        boolean isCurrentState = ConditionEvaluator.evaluateAll(option.selectedConditions(), event.player());
+                        if (isCurrentState) {
+                            // Skip execution - player selected the same option as current state
+                            FancyDialogsPlugin.get().getFancyLogger().debug("Skipping action for select option '" + option.value() + "' - already in this state");
+                            continue;
+                        }
+                    }
+                    
+                    // Execute option actions
+                    if (option.actions() != null) {
+                        for (DialogButton.DialogAction optionAction : option.actions()) {
+                            DialogAction action = FancyDialogsPlugin.get().getActionRegistry().getAction(optionAction.name());
+                            if (action == null) {
+                                FancyDialogsPlugin.get().getFancyLogger().warn("Received action for unknown action: " + optionAction.name() + " in select option: " + option.value());
+                                continue;
+                            }
+                            
+                            String data = optionAction.data();
+                            for (Map.Entry<String, String> entry : packet.getPayload().entrySet()) {
+                                data = data.replace("{" + entry.getKey() + "}", entry.getValue());
+                            }
+                            
+                            action.execute(event.player(), dialog, data);
+                        }
+                    }
+                    
+                    break; // Found the selected option, no need to continue
+                }
+            }
         }
     }
 
