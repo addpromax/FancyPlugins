@@ -23,8 +23,12 @@ import de.oliver.fancysitula.api.dialogs.types.FS_MultiActionDialog;
 import de.oliver.fancysitula.api.dialogs.types.FS_NoticeDialog;
 import de.oliver.fancysitula.api.entities.FS_RealPlayer;
 import de.oliver.fancysitula.factories.FancySitula;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.entity.Player;
 import org.lushplugins.chatcolorhandler.ChatColorHandler;
+import org.lushplugins.chatcolorhandler.ModernChatColorHandler;
 import org.lushplugins.chatcolorhandler.parsers.Parser;
 import org.lushplugins.chatcolorhandler.parsers.ParserTypes;
 
@@ -50,13 +54,31 @@ public class DialogImpl extends Dialog {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 将文本转换为 MiniMessage 格式，保留翻译键
+     * 使用 ModernChatColorHandler.translate() 返回 Component，然后序列化回 MiniMessage
+     */
+    private String translateToMiniMessage(String text, Player player, List<Parser> parsers) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+        
+        // 使用 ModernChatColorHandler 的 translate 方法
+        // 这会解析占位符和颜色，返回 Component 格式
+        Component component = ModernChatColorHandler.translate(text, player, parsers);
+        
+        // 将 Component 序列化回 MiniMessage 格式
+        // 这样可以保留 <lang:xxx> 等标签
+        return MiniMessage.miniMessage().serialize(component);
+    }
+
     private FS_Dialog buildForPlayer(Player player) {
         List<Parser> parsers = getParsersWithoutTranslatable();
         
         List<FS_DialogBody> body = new ArrayList<>();
         for (DialogBodyData bodyData : data.body()) {
             FS_DialogTextBody fsDialogTextBody = new FS_DialogTextBody(
-                    ChatColorHandler.translate(bodyData.text(), player, parsers),
+                    translateToMiniMessage(bodyData.text(), player, parsers),
                     200 // default text width
             );
             body.add(fsDialogTextBody);
@@ -74,9 +96,9 @@ public class DialogImpl extends Dialog {
                 if (input instanceof DialogTextField textField) {
                     control = new FS_DialogTextInput(
                             200, // default width
-                            ChatColorHandler.translate(textField.getLabel(), player, parsers),
+                            translateToMiniMessage(textField.getLabel(), player, parsers),
                             !textField.getLabel().isEmpty(),
-                            ChatColorHandler.translate(textField.getPlaceholder(), player, parsers),
+                            translateToMiniMessage(textField.getPlaceholder(), player, parsers),
                             textField.getMaxLength(),
                             textField.getMaxLines() > 1 ?
                                     new FS_DialogTextInput.MultilineOptions(textField.getMaxLines(), null) :
@@ -94,8 +116,8 @@ public class DialogImpl extends Dialog {
                         
                         entries.add(
                                 new FS_DialogSingleOptionInput.Entry(
-                                        ChatColorHandler.translate(entry.value(), player, parsers),
-                                        ChatColorHandler.translate(entry.display(), player, parsers),
+                                        translateToMiniMessage(entry.value(), player, parsers),
+                                        translateToMiniMessage(entry.display(), player, parsers),
                                         isInitiallySelected
                                 )
                         );
@@ -103,7 +125,7 @@ public class DialogImpl extends Dialog {
                     control = new FS_DialogSingleOptionInput(
                             200, // default width
                             entries,
-                            ChatColorHandler.translate(select.getLabel(), player, parsers),
+                            translateToMiniMessage(select.getLabel(), player, parsers),
                             !select.getLabel().isEmpty()
                     );
                 } else if (input instanceof DialogCheckbox checkbox) {
@@ -112,7 +134,7 @@ public class DialogImpl extends Dialog {
                     if (checkbox.getCheckedConditions() != null && !checkbox.getCheckedConditions().isEmpty()) {
                         initialChecked = ConditionEvaluator.evaluateAll(checkbox.getCheckedConditions(), player);
                     }
-                    control = new FS_DialogBooleanInput(input.getLabel(), initialChecked, "true", "false");
+                    control = new FS_DialogBooleanInput(translateToMiniMessage(input.getLabel(), player, parsers), initialChecked, "true", "false");
                 }
 
                 if (control == null) {
@@ -133,8 +155,8 @@ public class DialogImpl extends Dialog {
             
             FS_DialogActionButton fsDialogActionButton = new FS_DialogActionButton(
                     new FS_CommonButtonData(
-                            ChatColorHandler.translate(button.label(), player, parsers),
-                            ChatColorHandler.translate(button.tooltip(), player, parsers),
+                            translateToMiniMessage(button.label(), player, parsers),
+                            translateToMiniMessage(button.tooltip(), player, parsers),
                             150 // default button width
                     ),
                     new FS_DialogCustomAction(
@@ -151,8 +173,8 @@ public class DialogImpl extends Dialog {
         if (actions.isEmpty()) {
             return new FS_NoticeDialog(
                     new FS_CommonDialogData(
-                            ChatColorHandler.translate(data.title(), player, parsers),
-                            ChatColorHandler.translate(data.title(), player, parsers),
+                            translateToMiniMessage(data.title(), player, parsers),
+                            translateToMiniMessage(data.title(), player, parsers),
                             data.canCloseWithEscape(),
                             false,
                             FS_DialogAction.CLOSE,
@@ -174,8 +196,8 @@ public class DialogImpl extends Dialog {
 
         return new FS_MultiActionDialog(
                 new FS_CommonDialogData(
-                        ChatColorHandler.translate(data.title(), player, parsers),
-                        ChatColorHandler.translate(data.title(), player, parsers),
+                        translateToMiniMessage(data.title(), player, parsers),
+                        translateToMiniMessage(data.title(), player, parsers),
                         data.canCloseWithEscape(),
                         false,
                         FS_DialogAction.CLOSE,

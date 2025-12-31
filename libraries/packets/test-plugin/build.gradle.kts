@@ -44,6 +44,7 @@ tasks {
 
     shadowJar {
         archiveClassifier.set("")
+        dependsOn(":libraries:packets:shadowJar")
     }
 
     compileJava {
